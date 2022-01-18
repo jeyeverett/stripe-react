@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    "module": "es6",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
     "noImplicitAny": false,
@@ -10,7 +10,8 @@
     "target": "es2017",
     "lib": ["ESNext"],
     "strictNullChecks": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "moduleResolution": "node"
   },
   "compileOnSave": true,
   "include": ["src"]
