@@ -27,3 +27,21 @@ export async function getOrCreateCustomer(
     return await stripe.customers.retrieve(stripeCustomerId);
   }
 }
+
+// create a SetupIntent used to save a credit card for later use
+export async function createSetupIntent(userId: string) {
+  const { id } = await getOrCreateCustomer(userId);
+
+  return stripe.setupIntents.create({
+    customer: id,
+  });
+}
+
+// return all payment sources associated with a user
+export async function listPaymentMethods(userId: string) {
+  const { id } = await getOrCreateCustomer(userId);
+
+  return await stripe.customers.listPaymentMethods(id, {
+    type: "card",
+  });
+}

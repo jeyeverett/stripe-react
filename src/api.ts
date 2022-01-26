@@ -1,4 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
+import { createSetupIntent, listPaymentMethods } from "./customers.js";
 import { createStripeCheckoutSession } from "./checkout.js";
 import { createPaymentIntent } from "./payments.js";
 import { handleStripeWebhook } from "./webhooks.js";
@@ -14,7 +16,6 @@ app.use(
 );
 app.use(express.urlencoded({ extended: true }));
 
-import cors from "cors";
 app.use(cors({ origin: true }));
 
 // Authorization middleware - see function at bottom
@@ -36,6 +37,28 @@ app.post(
   "/payments/",
   catchAsync(async ({ body }: Request, res: Response) => {
     res.send(await createPaymentIntent(body.amount));
+  })
+);
+
+/* Customers and Setup Intents */
+
+// store card info on Stripe customer
+app.post(
+  "/wallet",
+  catchAsync(async (req: Request, res: Response) => {
+    const { uid } = validateUser(req);
+    const setupIntent = await createSetupIntent(uid);
+    res.send(setupIntent);
+  })
+);
+
+// get all cards attached to a Stripe customer
+app.get(
+  "/wallet",
+  catchAsync(async (req: Request, res: Response) => {
+    const { uid } = validateUser(req);
+    const wallet = await listPaymentMethods(uid);
+    res.send(wallet.data);
   })
 );
 
