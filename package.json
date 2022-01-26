@@ -15,7 +15,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.17.2",
-    "firebase-admin": "^10.0.1",
+    "firebase-admin": "^10.0.2",
     "stripe": "^8.197.0"
   },
   "devDependencies": {

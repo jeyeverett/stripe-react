@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import { createStripeCheckoutSession } from "./checkout.js";
 import { createPaymentIntent } from "./payments.js";
 import { handleStripeWebhook } from "./webhooks.js";
+import { auth } from "./firebase.js";
 export const app = express();
 
 // modify the express.json middleware to set the rawBody for webhook handling
@@ -15,6 +16,9 @@ app.use(express.urlencoded({ extended: true }));
 
 import cors from "cors";
 app.use(cors({ origin: true }));
+
+// Authorization middleware - see function at bottom
+app.use(decodeJWT);
 
 app.post("/test", (req: Request, res: Response) => {
   const amount = req.body.amount;
@@ -43,4 +47,27 @@ function catchAsync(callback: Function) {
   return (req: Request, res: Response, next: NextFunction) => {
     callback(req, res, next).catch(next);
   };
+}
+
+async function decodeJWT(req: Request, res: Response, next: NextFunction) {
+  if (req.headers?.authorization?.startsWith("Bearer")) {
+    const idToken = req.headers.authorization.split(" ")[1];
+    try {
+      const decodedToken = await auth.verifyIdToken(idToken);
+      req["currentUser"] = decodedToken;
+    } catch (err) {
+      console.log(err);
+    }
+  }
+  next();
+}
+
+function validateUser(req: Request) {
+  const user = req["currentUser"];
+
+  if (!user) {
+    throw new Error("You must be logged in to make this request.");
+  }
+
+  return user;
 }
