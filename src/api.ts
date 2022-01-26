@@ -5,6 +5,11 @@ import { createStripeCheckoutSession } from "./checkout.js";
 import { createPaymentIntent } from "./payments.js";
 import { handleStripeWebhook } from "./webhooks.js";
 import { auth } from "./firebase.js";
+import {
+  cancelSubscription,
+  createSubscription,
+  listSubscriptions,
+} from "./billing.js";
 export const app = express();
 
 // modify the express.json middleware to set the rawBody for webhook handling
@@ -61,6 +66,44 @@ app.get(
     res.send(wallet.data);
   })
 );
+
+/* Billing and Subscriptions */
+
+// create and charge new subscription
+app.post(
+  "/subscriptions/",
+  catchAsync(async (req: Request, res: Response) => {
+    const user = validateUser(req);
+    const { plan, payment_method } = req.body;
+    const subscription = await createSubscription(
+      user.uid,
+      plan,
+      payment_method
+    );
+    res.send(subscription);
+  })
+);
+
+// get all subscriptions for a customer
+app.get(
+  "/subscriptions/",
+  catchAsync(async (req: Request, res: Response) => {
+    const user = validateUser(req);
+    const subscriptions = await listSubscriptions(user.uid);
+    res.send(subscriptions.data);
+  })
+);
+
+// Unsubscribe or cancel a subscription
+app.patch(
+  "/subscriptions/:id",
+  catchAsync(async (req: Request, res: Response) => {
+    const { uid } = await validateUser(req);
+    res.send(await cancelSubscription(uid, req.params.id));
+  })
+);
+
+/* Webhooks */
 
 // Stripe webhook handler
 app.post("/webhooks", catchAsync(handleStripeWebhook));

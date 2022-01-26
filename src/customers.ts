@@ -2,12 +2,13 @@ import { stripe } from "./index.js";
 import { db } from "./firebase.js";
 import Stripe from "stripe";
 
-// Get an existing Stripe customer || create a new record
+type Customer = Stripe.Customer & { metadata: Object };
 
+// Get an existing Stripe customer || create a new record
 export async function getOrCreateCustomer(
   userId: string,
   params?: Stripe.CustomerCreateParams
-) {
+): Promise<Customer> {
   const userSnapshot = await db.collection("users").doc(userId).get();
   const { stripeCustomerId, email } = userSnapshot.data();
 
@@ -24,7 +25,7 @@ export async function getOrCreateCustomer(
     await userSnapshot.ref.update({ stripeCustomerId: customer.id });
     return customer;
   } else {
-    return await stripe.customers.retrieve(stripeCustomerId);
+    return (await stripe.customers.retrieve(stripeCustomerId)) as Customer;
   }
 }
 
@@ -45,3 +46,8 @@ export async function listPaymentMethods(userId: string) {
     type: "card",
   });
 }
+
+/* NOTES */
+/* 
+  To create a subscription, you need to create one in Stripe, under Products
+*/

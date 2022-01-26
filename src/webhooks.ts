@@ -1,13 +1,48 @@
 import { stripe } from "./index.js";
 import Stripe from "stripe";
+import { db } from "./firebase.js";
+import { FieldValue } from "firebase-admin/firestore";
 
 //Specific webhook event type handlers
 const webhookHandlers = {
+  "checkout.session.completed": async (data: Stripe.Event.Data) => {
+    // code
+  },
   "payment_intent.succeeded": async (data: Stripe.PaymentIntent) => {
     // code
   },
-  "payment_intent.failed": async (data: Stripe.PaymentIntent) => {
+  "payment_intent.payment_failed": async (data: Stripe.PaymentIntent) => {
     // code
+  },
+  "customer.subscription.deleted": async (data: Stripe.Subscription) => {
+    // code
+  },
+  "customer.subscription.created": async (
+    subscription: Stripe.Subscription
+  ) => {
+    const customer = (await stripe.customers.retrieve(
+      subscription.customer as string
+    )) as Stripe.Customer;
+
+    const userId = customer.metadata.firebaseUID;
+    const userRef = db.collection("users").doc(userId);
+    await userRef.update({
+      activePlans: FieldValue.arrayUnion(subscription.id),
+    });
+  },
+  "invoice.payment_succeeded": async (invoice: Stripe.Invoice) => {
+    // code
+  },
+  "invoice.payment_failed": async (invoice: Stripe.Invoice) => {
+    const customer = (await stripe.customers.retrieve(
+      invoice.customer as string
+    )) as Stripe.Customer;
+    const userSnapshot = await db
+      .collection("users")
+      .doc(customer.metadata.firebaseUID)
+      .get();
+    // Don't cancel the subscription right away, instead update the user's status and notify them the subscription will be canceled in a few days
+    await userSnapshot.ref.update({ status: "PAST_DUE" });
   },
 };
 
@@ -41,7 +76,6 @@ export const handleStripeWebhook = async (req, res) => {
   trigger events with:
     "stripe trigger payment_intent.created"
     "stripe trigger payment_intent.succeeded"
-    "stripe trigger payment_intent.failed"
 
   See all events with "stripe trigger --help"
 */
